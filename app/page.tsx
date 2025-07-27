@@ -29,21 +29,54 @@ export default function LaLigaPredictor() {
   const [awayTeam, setAwayTeam] = useState<string>("")
   const [results, setResults] = useState<PredictionResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handlePredict = async () => {
     if (!homeTeam || !awayTeam) return
 
     setIsLoading(true)
+    setResults(null)
+    setError(null)
 
-    // Simulate API call with random predictions
-    setTimeout(() => {
-      const homeWin = Math.floor(Math.random() * 60) + 20
-      const draw = Math.floor(Math.random() * 40) + 15
-      const awayWin = 100 - homeWin - draw
+    // 1. CONSTRUIR EL OBJETO COMPLETO QUE LA API ESPERA
+    // Para la demo, usamos valores de ejemplo para las estadísticas adicionales.
+    const requestData = {
+        home_team: homeTeam,
+        away_team: awayTeam,
+        h_form_goals: 1.8,
+        a_form_goals: 2.2,
+        h_shots_on_target: 6.5,
+        a_shots_on_target: 5.8,
+    };
 
-      setResults({ homeWin, draw, awayWin })
+    try {
+      const response = await fetch("http://127.0.0.1:8000/predict", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData), // Enviamos el objeto completo
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al obtener la predicción. Revisa que la API esté corriendo.")
+      }
+
+      const data = await response.json()
+
+      // 2. LEER LA RESPUESTA CORRECTAMENTE
+      // La API devuelve: { prediction: "H", probabilities: { H: 0.5, D: 0.2, A: 0.3 } }
+      // Accedemos a `data.probabilities.H`, `data.probabilities.D`, etc.
+      setResults({
+        homeWin: Math.round(data.probabilities.H * 100),
+        draw: Math.round(data.probabilities.D * 100),
+        awayWin: Math.round(data.probabilities.A * 100),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.")
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   const getHighestProbability = () => {
@@ -58,6 +91,7 @@ export default function LaLigaPredictor() {
     setHomeTeam("")
     setAwayTeam("")
     setResults(null)
+    setError(null)
   }
 
   return (
@@ -134,7 +168,7 @@ export default function LaLigaPredictor() {
                   )}
                 </Button>
 
-                {results && (
+                {(results || error) && (
                   <Button
                     onClick={resetForm}
                     variant="outline"
@@ -147,6 +181,12 @@ export default function LaLigaPredictor() {
             </CardContent>
           </Card>
         </div>
+
+        {error && (
+          <div className="max-w-2xl mx-auto mb-8 text-center bg-red-900/50 border border-red-500 text-red-300 px-4 py-3 rounded-md">
+            <p>{error}</p>
+          </div>
+        )}
 
         {/* Results Section */}
         {results && (
