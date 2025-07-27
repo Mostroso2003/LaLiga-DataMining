@@ -5,14 +5,20 @@ import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import PredictionRequest, PredictionResponse
+import os
+from dotenv import load_dotenv
+
+load_dotenv() # Carga las variables del archivo .env
 
 # Inicializar la app de FastAPI
 app = FastAPI(title="LaLiga Prediction API")
 
-# Configurar CORS para permitir peticiones desde tu frontend de React
+# Lee las URLs permitidas desde la variable de entorno
+origins = os.getenv("CORS_ORIGINS", "").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, limita esto a la URL de tu frontend
+    allow_origins=origins, # Usa la lista de orígenes
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
