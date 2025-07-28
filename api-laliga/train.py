@@ -31,8 +31,7 @@ y_encoded = encoder.fit_transform(y_categorical)
 # Calcular pesos de las clases
 sample_weights = compute_sample_weight(class_weight='balanced', y=y_encoded)
 
-# Separar train/test para comparar modelos
-X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True, stratify=y_encoded)
+
 
 
 # Definir el modelo base para XGBoost
@@ -68,7 +67,7 @@ random_search = RandomizedSearchCV(
 
 
 # Ejecutar la búsqueda. Aquí se realiza el trabajo pesado.
-random_search.fit(X_train, y_train, sample_weight=sample_weights[:len(y_train)])
+random_search.fit(X, y_encoded, sample_weight=sample_weights)
 
 
 # Imprimir los mejores resultados
@@ -77,25 +76,18 @@ print(f"Mejor F1-Score (macro avg) encontrado: {random_search.best_score_:.4f}")
 print("Mejores hiperparámetros encontrados:")
 print(random_search.best_params_)
 
-# Evaluar XGBoost en test
-print("\n--- Evaluación XGBoost en test ---")
+
+
+# Guardar el mejor modelo encontrado (XGBoost)
 best_model = random_search.best_estimator_
-y_pred_xgb = best_model.predict(X_test)
-print("Accuracy:", accuracy_score(y_test, y_pred_xgb))
-print("Classification Report:\n", classification_report(y_test, y_pred_xgb, target_names=encoder.classes_))
 
-# Entrenar y evaluar RandomForest para comparar
-print("\n--- Entrenando y evaluando RandomForestClassifier ---")
+# Entrenar y guardar RandomForest para test_model.py
 rf = RandomForestClassifier(class_weight='balanced', random_state=42)
-rf.fit(X_train, y_train)
-y_pred_rf = rf.predict(X_test)
-print("Accuracy:", accuracy_score(y_test, y_pred_rf))
-print("Classification Report:\n", classification_report(y_test, y_pred_rf, target_names=encoder.classes_))
+rf.fit(X, y_encoded)
 
-
-# Guardar el mejor modelo encontrado (solo XGBoost)
-print("\nModelo optimizado entrenado exitosamente.")
+print("\nModelos entrenados exitosamente.")
 os.makedirs('artifacts', exist_ok=True)
-joblib.dump(best_model, 'artifacts/random_forest_model.joblib')
+joblib.dump(best_model, 'artifacts/xgboost_model.joblib')
+joblib.dump(rf, 'artifacts/random_forest_model.joblib')
 joblib.dump(encoder, 'artifacts/label_encoder.joblib')
-print("Mejor modelo guardado en la carpeta /artifacts.")
+print("Modelos guardados en la carpeta /artifacts.")
