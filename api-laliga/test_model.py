@@ -12,33 +12,35 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 def evaluate_model():
     """Carga el modelo y lo evalúa contra un conjunto de prueba."""
-    print("--- 1. Evaluación y Comparación de Modelos ---")
-
+    print("--- 1. Evaluación del Modelo Existente ---")
+    
     # Cargar los datos originales
     df = pd.read_csv('datos_liga_procesados.csv')
     X = df.drop(columns=['Resultado'])
     y_test_text = df['Resultado'] # Mantenemos los nombres originales para el reporte
-
+    
     # Dividir los datos para tener un conjunto de prueba
     _, X_test, _, y_test = train_test_split(X, y_test_text, test_size=0.2, random_state=42, shuffle=False)
-
+    
+    # Cargar el modelo y el decodificador de etiquetas
+    model = joblib.load('artifacts/random_forest_model.joblib')
     encoder = joblib.load('artifacts/label_encoder.joblib')
-
-    modelos = {
-        'RandomForest': joblib.load('artifacts/random_forest_model.joblib'),
-        'XGBoost': joblib.load('artifacts/xgboost_model.joblib')
-    }
-
-    for nombre, modelo in modelos.items():
-        y_pred_numeric = modelo.predict(X_test)
-        y_pred_text = encoder.inverse_transform(y_pred_numeric)
-        accuracy = accuracy_score(y_test, y_pred_text)
-        report = classification_report(y_test, y_pred_text, target_names=encoder.classes_)
-        print(f"\nModelo: {nombre}")
-        print(f"✅ Accuracy: {accuracy:.2%}")
-        print("✅ Reporte de Clasificación:")
-        print(report)
-        print("-" * 40)
+    
+    # Realizar predicciones (estas serán numéricas: 0, 1, 2)
+    y_pred_numeric = model.predict(X_test)
+    
+    # --- CORRECCIÓN AQUÍ ---
+    # Decodificamos las predicciones numéricas a texto (ej: 0 -> 'A')
+    y_pred_text = encoder.inverse_transform(y_pred_numeric)
+    
+    # Calcular y mostrar las métricas usando las etiquetas de texto
+    accuracy = accuracy_score(y_test, y_pred_text)
+    report = classification_report(y_test, y_pred_text, target_names=encoder.classes_)
+    
+    print(f"✅ Accuracy del modelo en datos de prueba: {accuracy:.2%}")
+    print("\n✅ Reporte de Clasificación:")
+    print(report)
+    print("-" * 40)
 
 
 def predict_new_match(sample_data):
