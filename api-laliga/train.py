@@ -1,9 +1,12 @@
 # train.py con Optimización de Hiperparámetros
 import pandas as pd
+
 import xgboost as xgb
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_sample_weight
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.metrics import classification_report, accuracy_score
 import joblib
 import json
 import os
@@ -11,8 +14,10 @@ import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
+
 print("Iniciando la OPTIMIZACIÓN DE HIPERPARÁMETROS con RandomizedSearchCV...")
 print("Este proceso puede tardar varios minutos...")
+
 
 # Cargar datos
 df = pd.read_csv('datos_liga_procesados.csv')
@@ -26,7 +31,11 @@ y_encoded = encoder.fit_transform(y_categorical)
 # Calcular pesos de las clases
 sample_weights = compute_sample_weight(class_weight='balanced', y=y_encoded)
 
-# Definir el modelo base
+# Separar train/test para comparar modelos
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True, stratify=y_encoded)
+
+
+# Definir el modelo base para XGBoost
 model = xgb.XGBClassifier(
     objective='multi:softprob',
     eval_metric='mlogloss',
@@ -57,8 +66,10 @@ random_search = RandomizedSearchCV(
     random_state=42
 )
 
+
 # Ejecutar la búsqueda. Aquí se realiza el trabajo pesado.
-random_search.fit(X, y_encoded, sample_weight=sample_weights)
+random_search.fit(X_train, y_train, sample_weight=sample_weights[:len(y_train)])
+
 
 # Imprimir los mejores resultados
 print("\nBúsqueda finalizada.")
@@ -66,13 +77,25 @@ print(f"Mejor F1-Score (macro avg) encontrado: {random_search.best_score_:.4f}")
 print("Mejores hiperparámetros encontrados:")
 print(random_search.best_params_)
 
-# Guardar el mejor modelo encontrado
+# Evaluar XGBoost en test
+print("\n--- Evaluación XGBoost en test ---")
 best_model = random_search.best_estimator_
-print("\nModelo optimizado entrenado exitosamente.")
+y_pred_xgb = best_model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred_xgb))
+print("Classification Report:\n", classification_report(y_test, y_pred_xgb, target_names=encoder.classes_))
 
-# Guardar artefactos
+# Entrenar y evaluar RandomForest para comparar
+print("\n--- Entrenando y evaluando RandomForestClassifier ---")
+rf = RandomForestClassifier(class_weight='balanced', random_state=42)
+rf.fit(X_train, y_train)
+y_pred_rf = rf.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred_rf))
+print("Classification Report:\n", classification_report(y_test, y_pred_rf, target_names=encoder.classes_))
+
+
+# Guardar el mejor modelo encontrado (solo XGBoost)
+print("\nModelo optimizado entrenado exitosamente.")
 os.makedirs('artifacts', exist_ok=True)
 joblib.dump(best_model, 'artifacts/random_forest_model.joblib')
 joblib.dump(encoder, 'artifacts/label_encoder.joblib')
-
 print("Mejor modelo guardado en la carpeta /artifacts.")
