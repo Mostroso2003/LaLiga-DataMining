@@ -28,8 +28,12 @@ y_categorical = df['Resultado']
 encoder = LabelEncoder()
 y_encoded = encoder.fit_transform(y_categorical)
 
+
 # Calcular pesos de las clases
 sample_weights = compute_sample_weight(class_weight='balanced', y=y_encoded)
+
+# Separar train/test para entrenamiento real
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded)
 
 
 
@@ -66,8 +70,9 @@ random_search = RandomizedSearchCV(
 )
 
 
-# Ejecutar la búsqueda. Aquí se realiza el trabajo pesado.
-random_search.fit(X, y_encoded, sample_weight=sample_weights)
+
+# Ejecutar la búsqueda SOLO con train
+random_search.fit(X_train, y_train, sample_weight=sample_weights[:len(y_train)])
 
 
 # Imprimir los mejores resultados
@@ -78,12 +83,13 @@ print(random_search.best_params_)
 
 
 
+
 # Guardar el mejor modelo encontrado (XGBoost)
 best_model = random_search.best_estimator_
 
-# Entrenar y guardar RandomForest para test_model.py
+# Entrenar y guardar RandomForest SOLO con train
 rf = RandomForestClassifier(class_weight='balanced', random_state=42)
-rf.fit(X, y_encoded)
+rf.fit(X_train, y_train)
 
 print("\nModelos entrenados exitosamente.")
 os.makedirs('artifacts', exist_ok=True)
