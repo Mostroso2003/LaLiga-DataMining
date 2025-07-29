@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # Cargar los artefactos del modelo al iniciar la API
-model = joblib.load('artifacts/random_forest_model.joblib')
+model = joblib.load('artifacts/best_model.joblib')
 scaler = joblib.load('artifacts/scaler.joblib')
 with open('artifacts/model_columns.json', 'r') as f:
     model_columns = json.load(f)
