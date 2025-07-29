@@ -4,9 +4,9 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'La liga',
+  description: 'Created with next.js',
+  generator: 'La liga Data Mining',
 }
 
 export default function RootLayout({
